@@ -336,7 +336,7 @@ PDFCraft is configured for static export (`output: 'export'`), which means it ca
 2. **Deploy to your preferred platform:**
    - **Vercel** (Recommended): `vercel --prod`
    - **Netlify**: `netlify deploy --prod --dir=out`
-   - **GitHub Pages**: Push to `main` branch (uses GitHub Actions)
+   - **GitHub Pages**: Build locally with `npm run build` and publish the `out` directory yourself. This repository does not deploy on push.
    - **Cloudflare Pages**: `wrangler pages deploy out`
    - **Docker + Nginx**: `docker compose --profile prod up --build`
 
@@ -346,7 +346,7 @@ PDFCraft is configured for static export (`output: 'export'`), which means it ca
 |------|----------|
 | `vercel.json` | Vercel |
 | `netlify.toml` | Netlify |
-| `.github/workflows/deploy.yml` | GitHub Pages |
+| `.github/workflows/ci.yml` | Pull request and `main` checks only. It does not deploy. |
 | `public/_headers` | Cloudflare Pages / Netlify |
 | `docker-compose.yml` + `nginx.conf` | Docker / Self-hosted |
 | `.htaccess` | Apache |

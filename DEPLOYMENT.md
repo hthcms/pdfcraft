@@ -72,18 +72,12 @@ netlify deploy --prod --dir=out
 
 > ⚠️ **Limitation:** GitHub Pages does **not** support custom response headers. This means `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers cannot be set, so `SharedArrayBuffer` will be unavailable. **Document conversion tools (Word/Excel/PPT/RTF to PDF) that rely on LibreOffice WASM will not work on GitHub Pages.** All other PDF tools (merge, split, compress, etc.) work fine. Use Vercel, Netlify, Cloudflare Pages, or Docker+Nginx for full feature support.
 
-**Automatic Deployment:**
-1. Enable GitHub Pages in repository settings
-2. Set source to "GitHub Actions"
-3. Push to `main` branch - workflow deploys automatically
+**Manual deployment only.** This repository does not publish to GitHub Pages on push.
 
-**Manual Deployment:**
 ```bash
 npm run build
-# Push the out/ directory to gh-pages branch
+# Publish the out/ directory yourself, for example to a gh-pages branch
 ```
-
-The `.github/workflows/deploy.yml` workflow handles automatic deployment.
 
 ---
 
@@ -637,13 +631,12 @@ npm run build
 ## 🔄 Continuous Deployment
 
 The project includes:
-- **GitHub Actions workflow** (`.github/workflows/release.yml`) - Creates releases on push to main
-- **GitHub Actions workflow** (`.github/workflows/deploy.yml`) - Deploys to GitHub Pages
+- **GitHub Actions workflow** (`.github/workflows/ci.yml`) - Runs install, typecheck, lint, tests, and the static export on pull requests and pushes to `main`. It does not deploy or publish.
 - **Netlify configuration** (`netlify.toml`)
 - **Vercel configuration** (`vercel.json`)
 - **Docker Compose** (`docker-compose.yml`) + Nginx (`nginx.conf`)
 
-Push to `main` branch to trigger automatic deployment.
+Publishing is manual. A push to `main` does not deploy the site, publish a container image, or create a release.
 
 ---
 
