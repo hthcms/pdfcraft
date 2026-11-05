@@ -1,5 +1,5 @@
 /**
- * Type declarations for pdfjs-dist-legacy
+ * Type declarations for the pdfjs-dist-legacy alias (patched pdfjs-dist 4.10).
  * This is an alias for pdfjs-dist@2.16.105
  */
 

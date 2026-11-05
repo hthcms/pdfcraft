@@ -4,6 +4,14 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  // Vitest 4.1 uses Vite's Oxc transformer. The React plugin still sets the
+  // deprecated esbuild JSX flags, which Oxc ignores, so JSX in tests must be
+  // enabled here.
+  oxc: {
+    jsx: {
+      runtime: 'automatic',
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,
