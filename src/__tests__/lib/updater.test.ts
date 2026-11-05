@@ -165,7 +165,22 @@ describe('Software Updater', () => {
         json: async () => mockGitHubResponse,
       });
 
+      // The assertion is about the Windows portable asset. jsdom on Linux
+      // reports a Linux host, which would leave primary unset for this asset list.
+      const userAgent = Object.getOwnPropertyDescriptor(navigator, 'userAgent');
+      const platform = Object.getOwnPropertyDescriptor(navigator, 'platform');
+      Object.defineProperty(navigator, 'userAgent', {
+        configurable: true,
+        value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      });
+      Object.defineProperty(navigator, 'platform', {
+        configurable: true,
+        value: 'Win32',
+      });
+
       const result = await checkUpdate({ force: true });
+      if (userAgent) Object.defineProperty(navigator, 'userAgent', userAgent);
+      if (platform) Object.defineProperty(navigator, 'platform', platform);
       expect(result.hasUpdate).toBe(true);
       expect(result.latestVersion).toBe('v2026.09.15-xyz');
       expect(result.matchedAssets.primary?.platformType).toBe('windows-portable');

@@ -43,9 +43,14 @@ export class VectorExtractorProcessor extends BasePDFProcessor {
     const file = files[0];
 
     try {
-      this.updateProgress(10, 'Initializing PDF.js Legacy engine...');
+      this.updateProgress(10, 'Initializing PDF.js engine...');
       const pdfjsLegacy = await loadPdfjsLegacy();
-      const SVGGraphics = await loadSVGGraphics();
+      let SVGGraphics: Awaited<ReturnType<typeof loadSVGGraphics>> | null = null;
+      try {
+        SVGGraphics = await loadSVGGraphics();
+      } catch (svgError) {
+        console.warn('SVGGraphics is not in patched pdfjs-dist; using a raster SVG fallback.', svgError);
+      }
 
       this.updateProgress(20, 'Loading PDF document...');
       const arrayBuffer = await file.arrayBuffer();
@@ -58,37 +63,42 @@ export class VectorExtractorProcessor extends BasePDFProcessor {
       const page = await pdfDoc.getPage(targetPageNum);
       const viewport = page.getViewport({ scale: 1.5 }); // High resolution scale
 
-      // Fetch operator list
-      const opList = await page.getOperatorList();
-      
       this.updateProgress(70, 'Deconstructing graphics stream...');
-      
-      // pdf.js SVGGraphics renderer
-      // Note: SVGGraphics requires the page's object caches
-      const commonObjs = page.commonObjs;
-      const objs = page.objs;
-      
-      // Create SVG via pdfjs SVGGraphics compiler
-      // Under node/jsdom we might need a fallback or safe guard,
-      // but in standard browser context SVGGraphics works natively.
+
       let svgString = '';
-      
-      if (typeof window !== 'undefined') {
-        const svgGfx = new SVGGraphics(commonObjs, objs);
-        const svgElement = await svgGfx.getSVG(opList, viewport);
-        
-        // Post-processing SVG elements (cleaning, formatting classes)
-        if (extractOptions.cleanGrid) {
-          // Remove viewport attributes that constrain embedding responsiveness
-          svgElement.removeAttribute('style');
-          svgElement.setAttribute('width', '100%');
-          svgElement.setAttribute('height', '100%');
-          svgElement.setAttribute('viewBox', `0 0 ${viewport.width} ${viewport.height}`);
+
+      if (typeof window !== 'undefined' && SVGGraphics) {
+        try {
+          const opList = await page.getOperatorList();
+          const commonObjs = page.commonObjs;
+          const objs = page.objs;
+          const svgGfx = new SVGGraphics(commonObjs, objs);
+          const svgElement = await svgGfx.getSVG(opList, viewport);
+
+          if (extractOptions.cleanGrid) {
+            svgElement.removeAttribute('style');
+            svgElement.setAttribute('width', '100%');
+            svgElement.setAttribute('height', '100%');
+            svgElement.setAttribute('viewBox', `0 0 ${viewport.width} ${viewport.height}`);
+          }
+
+          svgString = svgElement.outerHTML;
+        } catch (renderError) {
+          console.warn('Vector SVG compile failed; using a fallback SVG.', renderError);
         }
-        
-        svgString = svgElement.outerHTML;
-      } else {
-        // Mock fallback for Node test runner
+      }
+      if (!svgString && typeof window !== 'undefined' && typeof page.render === 'function') {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          throw new Error('Canvas is not available for the SVG fallback.');
+        }
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const href = canvas.toDataURL('image/png');
+        svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${viewport.width} ${viewport.height}" width="100%" height="100%"><image href="${href}" width="${viewport.width}" height="${viewport.height}"/></svg>`;
+      } else if (!svgString) {
         svgString = `<svg viewBox="0 0 ${viewport.width} ${viewport.height}"><rect width="100%" height="100%" fill="none"/><path d="M10 10 L50 50" stroke="black" stroke-width="2"/></svg>`;
       }
 

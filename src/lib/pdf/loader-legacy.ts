@@ -1,12 +1,10 @@
 /**
- * PDF.js Legacy Library Loader
- * 
- * Loads pdfjs-dist v2.16.105 for SVGGraphics support.
- * This version is used specifically for PDF to SVG vector conversion.
- * 
- * The main loader.ts uses pdfjs-dist v4.x for general PDF processing,
- * while this loader provides access to the legacy SVGGraphics module
- * that was removed in v3.x+.
+ * PDF.js legacy-build loader.
+ *
+ * Loads the patched pdfjs-dist 4.10 legacy build (same package line as the
+ * main viewer). pdfjs-dist 2.16 shipped SVGGraphics, and it is also the
+ * release affected by GHSA-wgrm-67xf-hhpq. That module was removed before
+ * the patch, so vector tools fall back when SVGGraphics is unavailable.
  */
 
 // Type definitions for legacy pdfjs-dist
@@ -29,16 +27,15 @@ function configureLegacyWorker(pdfjsLib: PDFJSLegacyModule): void {
     if (legacyWorkerConfigured) return;
 
     if (typeof window !== 'undefined') {
-        // Use the local worker file for offline support
-        // The worker file is located in public/workers/pdf.worker.legacy.min.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = '/workers/pdf.worker.legacy.min.js';
+        // Same patched worker the main loader uses. The legacy build worker is
+        // also copied to /workers/pdf.worker.legacy.min.mjs by postinstall.
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/workers/pdf.worker.min.js';
         legacyWorkerConfigured = true;
     }
 }
 
 /**
- * Load legacy pdfjs-dist library (v2.16.105)
- * Used specifically for PDF to SVG vector conversion with SVGGraphics
+ * Load the patched pdfjs-dist build used for SVG conversion attempts.
  */
 export async function loadPdfjsLegacy(): Promise<PDFJSLegacyModule> {
     if (pdfjsLegacyInstance) {
@@ -73,21 +70,13 @@ export interface SVGGraphicsConstructor {
 }
 
 /**
- * Load SVGGraphics class from legacy pdfjs-dist
- * This is the main reason for using the legacy version
+ * SVGGraphics lived in pdfjs-dist 2.x and is not part of the patched 4.10
+ * package. Callers fall back to canvas rendering.
  */
 export async function loadSVGGraphics(): Promise<SVGGraphicsConstructor> {
-    // First ensure the main library is loaded
-    await loadPdfjsLegacy();
-
-    // Import SVGGraphics from the display module
-    const svgModule = await import('pdfjs-dist-legacy/lib/display/svg');
-
-    if (!svgModule.SVGGraphics) {
-        throw new Error('SVGGraphics class not found in legacy pdfjs-dist');
-    }
-
-    return svgModule.SVGGraphics as SVGGraphicsConstructor;
+    throw new Error(
+        'SVGGraphics is not part of patched pdfjs-dist 4.10.38 (removed before GHSA-wgrm-67xf-hhpq was fixed).'
+    );
 }
 
 /**

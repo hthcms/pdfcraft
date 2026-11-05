@@ -16,13 +16,13 @@ import type { SVGGraphicsConstructor } from '../loader-legacy';
 
 // Dynamic imports to avoid SSR issues with pdfjs-dist-legacy (which requires 'canvas' module)
 async function loadPdfjsLegacy() {
-    const module = await import('../loader-legacy');
-    return module.loadPdfjsLegacy();
+    const legacyModule = await import('../loader-legacy');
+    return legacyModule.loadPdfjsLegacy();
 }
 
 async function loadSVGGraphics(): Promise<SVGGraphicsConstructor> {
-    const module = await import('../loader-legacy');
-    return module.loadSVGGraphics();
+    const legacyModule = await import('../loader-legacy');
+    return legacyModule.loadSVGGraphics();
 }
 
 /**
@@ -104,7 +104,7 @@ export class PDFToSVGProcessor extends BasePDFProcessor {
         try {
             this.updateProgress(5, 'Loading PDF library...');
 
-            // Use legacy pdfjs-dist (v2.16.105) for SVGGraphics support
+            // Patched pdfjs-dist. True vector SVGGraphics is not in 4.10; canvas fallback covers that.
             const pdfjs = await loadPdfjsLegacy();
 
             if (this.checkCancelled()) {
@@ -243,8 +243,9 @@ export class PDFToSVGProcessor extends BasePDFProcessor {
     }
 
     /**
-     * Render page to true vector SVG using legacy PDF.js SVGGraphics
-     * Uses pdfjs-dist v2.16.105 which includes the SVGGraphics module
+     * Render page to vector SVG when SVGGraphics is available.
+     * Patched pdfjs-dist 4.10 does not include that class, and the caller
+     * falls back to canvas rendering.
      */
     private async renderPageToVectorSVG(
         page: any,
